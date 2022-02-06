@@ -1,0 +1,390 @@
+---
+title: "The Not-so-great fires of Toronto"
+subtitle: "Fire incidents 2011-2019 under control by the Toronto Fire Services"
+author: Kimlin Chin
+thanks: "Code and data are available at: LINK."
+date: "`r format(Sys.time(), '%d %B %Y')`"
+abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+output:
+  bookdown::pdf_document2
+toc: FALSE
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load libraries
+library(tidyverse)
+library(knitr)
+library(janitor)
+library(kableExtra)
+
+library(lubridate)
+
+# read in data
+fire_incidents <- read_csv(here::here("inputs/data/fire_incidents.csv"))
+
+```
+
+# Introduction
+
+<!-- 3-4 paragraphs -->
+<!-- - [p1] Broader context to motivate the reader -->
+<!-- - [p2] A reader should be able to read only your introduction and have a good idea about the research you carried out and what you found, why is it important, should we care. -->
+<!-- - [p3] It must outline the structure of the paper. -->
+
+<!-- Articles: -->
+<!-- - https://dailyhive.com/toronto/toronto-fires-history-2019 -->
+<!-- - https://www.blogto.com/city/2008/02/a_brief_history_of_toronto_fires/ -->
+<!-- - https://www.blogto.com/city/2020/02/remembering-time-u-t-burned-down-valentines-day-more-100-years-ago/ -->
+<!-- - https://www.cbc.ca/news/canada/toronto/st-james-cathedral-notre-dame-1.5100421 -->
+
+Toronto has a history with fires. The first Great Fire of Toronto occurred in 1849 and destroyed the St. James Cathedral [what area? what damage?]. In 1890 on Valentine's Day, University College, [relation to UofT], burned down during the annual student ball. Then came Toronto's second great fire, the Great Fire of 1904, which remains Toronto's largest fire to date [what area? what damage?]. To this day the cause of the fire remains unknown. Back then however, many buildings were constructed using wood and the fire companies were not well trained. 
+
+Fortunately we have come a long way since then, with the formal establishment of the Toronto Fire Services in 1998. In fact, in 2019 the Toronto Fire Services earned accredited agency status from the Commission on Fire Accreditation International (CFAI), making the City of Toronto the largest city in North America to have an accredited fire service (https://www.toronto.ca/city-government/accountability-operations-customer-service/city-administration/staff-directory-divisions-and-customer-service/fire-services/). The Toronto Fire Services offers many services including education programs, fire safety inspections and investigations, emergency and disaster response, and event support.
+
+The Toronto Fire Services also provided the data that we will be analyzing in this paper, which is of fire incidents in Toronto that they responded to in the time frame (TODO). This data is similar to what is submitted to the Ontario Fire Marshal and is processed and used to develop "fire prevention and public education programs, community risk assessments, [and] legislation that helps protect people, property and the environment" (https://www.ontario.ca/page/office-fire-marshal). We will cover an overview of the data and its features, and then look more deeply into it to answer the following research questions:
+- What are the main causes of fires in Toronto today?
+- How has the number of fires changed over the past decade?
+- How fast are response times to fires and times for bringing them under control?
+- What is the estimated damage costs of fires per year?
+- What parts of the house do most of the fires begin in?
+
+You can and should cross-reference sections and sub-sections. For instance, Section \@ref(data). R Markdown automatically makes the sections lower case and adds a dash to spaces to generate labels, for instance, Section \@ref(first-discussion-point). 
+
+```{r, include=FALSE}
+# summary(is.na(fire_incidents))
+# max(fire_incidents$Estimated_Dollar_Loss)
+```
+
+
+
+# Data
+
+<!-- Source of data -->
+The data was obtained from the Toronto Fire Services (TFS) and downloaded through the Open Data Toronto portal. It consists of all the recorded fire incidents that Toronto Fire responded to during the period 2011-2019. 
+
+<!-- Methodology and approach used to collect and process the data -->
+<!-- How is data recorded -->
+When a fire occurs, an individual can alert the TFS by calling 9-1-1. Response to these calls and dispatching the units is handled by the TFS Communications Centre (Annual report). The Communications Centre also appears to be responsible for actively monitoring and updating information on current fire incidents, as there is a page on the City of Toronto website with active fire incidents, updated at 5-minute intervals (https://www.toronto.ca/community-people/public-safety-alerts/alerts-notifications/toronto-fire-active-incidents/). The data on fire incidents may also be processed by the Fire Investigation Division of the TFS to add more details such as fire cause, origin and circumstances (Annual Report). This dataset is described to be "similar to what is sent to the Ontario Fire Marshal" (https://open.toronto.ca/dataset/fire-incidents/), which is the main leadership body on fire safety in Ontario (https://www.ontario.ca/page/office-fire-marshal), one of whose functions is to collect comprehensive data on fire incidents from all Ontario fire departments. However, personal information and some of the observations were removed from this dataset for privacy purposes. The dataset received a Gold data quality score on the Open Data Toronto portal, which is the highest badge based on rated data features of accessibility, completeness, freshness, metadata and usability.
+
+<!-- Key features, strengths and weaknesses about the source -->
+There are 43 variables in the dataset and 17536 observations. Each observation represents a single fire incident, with details about the location, time, persons affected, cause and extent of the fire. The many variables allows an excess of details about each incident to be provided and a lot of room for data exploration, but there is also a large number of missing values. With 17536 observations, it is a fairly large dataset which is good for data analysis.
+
+Since there are so many variables, we will group them by similarity and show a glimpse of some of the data observations. This is shown in tables \@ref(tab:locationvar)
+<!-- What does the data look like? -->
+```{r locationvar, echo=FALSE}
+fire_incidents %>%
+  select(`_id`, Incident_Station_Area, Incident_Ward, Intersection, Latitude, Longitude) %>%
+  janitor::clean_names(case = "title") %>%
+  slice(1:10) %>%
+  kable(
+    caption = "First ten rows of the location features of a dataset of fire incidents in Toronto from 2011-2019",
+    digits = 1,
+    booktabs = TRUE, 
+    linesep = ""
+  ) #%>%
+  # column_spec(4, width = "8em") %>%
+  # add_header_above(c(" " = 0, "Location Variables" = 6), bold = TRUE)
+```
+
+```{r timevar, echo=FALSE}
+fire_incidents %>%
+  select(`_id`, Ext_agent_app_or_defer_time, TFS_Alarm_Time, TFS_Arrival_Time, Fire_Under_Control_Time, Last_TFS_Unit_Clear_Time) %>%
+  rename(Ext_agent_time = Ext_agent_app_or_defer_time) %>%
+  janitor::clean_names(case = "title") %>%
+  slice(1:5) %>%
+  kable(
+    caption = "First ten rows of the time features of a dataset of fire incidents in Toronto from 2011-2019",
+    digits = 1,
+    booktabs = TRUE,
+    linesep = ""
+  )  %>%
+  column_spec(c(2,3,4,5), width = "7em") #%>%
+  # add_header_above(c(" " = 0, "Time Variables" = 6), bold = TRUE)
+```
+
+
+```{r personvar, echo=FALSE}
+fire_incidents %>%
+  select(`_id`, Civilian_Casualties, Count_of_Persons_Rescued, Estimated_Number_Of_Persons_Displaced, TFS_Firefighter_Casualties) %>%
+  janitor::clean_names(case = "title") %>%
+  slice(1:5) %>%
+  kable(
+    caption = "First ten rows of the person-related features of a dataset of fire incidents in Toronto from 2011-2019",
+    digits = 1,
+    booktabs = TRUE,
+    linesep = ""
+  )  #%>%
+  # column_spec(c(2,5), width = "8em") %>%
+  # add_header_above(c(" " = 0, "Person Variables" = 5), bold = TRUE)
+```
+
+```{r damagevar, echo=FALSE}
+# fire_incidents %>%
+#   select(`_id`, `Building_Status`, `Business_Impact`, `Estimated_Dollar_Loss`, `Exposures`) %>%
+#   janitor::clean_names(case = "title") %>%
+#   slice(1:5) %>%
+#   kable(
+#     caption = "First ten rows of the damage features of a dataset of fire incidents in Toronto from 2011-2019",
+#     digits = 1,
+#     booktabs = TRUE, 
+#     linesep = ""
+#   )  %>%
+#   # column_spec(c(2,5), width = "8em") %>%
+#   add_header_above(c(" " = 0, "Damage Variables" = 5), bold = TRUE)
+```
+
+```{r alarmvar, echo=FALSE}
+# fire_incidents %>%
+#   select(`_id`, Fire_Alarm_System_Impact_on_Evacuation, Fire_Alarm_System_Operation, Fire_Alarm_System_Presence, Fire_Under_Control_Time, Smoke_Alarm_at_Fire_Origin, Smoke_Alarm_at_Fire_Origin_Alarm_Failure, Smoke_Alarm_at_Fire_Origin_Alarm_Type, Smoke_Alarm_Impact_on_Persons_Evacuating_Impact_on_Evacuation, Smoke_Spread) %>%
+#   janitor::clean_names(case = "title") %>%
+#   slice(1:5) %>%
+#   kable(
+#     caption = "First ten rows of the smoke alarm features of a dataset of fire incidents in Toronto from 2011-2019",
+#     digits = 1,
+#     booktabs = TRUE, 
+#     linesep = ""
+#   )  %>%
+#   # column_spec(c(2,5), width = "8em") %>%
+#   add_header_above(c(" " = 0, "Smoke Alarm Variables" = 10), bold = TRUE)
+```
+
+```{r sprinklervar, echo=FALSE}
+# fire_incidents %>%
+#   select(`_id`, Sprinkler_System_Operation, Sprinkler_System_Presence) %>%
+#   janitor::clean_names(case = "title") %>%
+#   slice(1:5) %>%
+#   kable(
+#     caption = "First ten rows of the sprinkler features of a dataset of fire incidents in Toronto from 2011-2019",
+#     digits = 1,
+#     booktabs = TRUE, 
+#     linesep = ""
+#   )  %>%
+#   # column_spec(c(2,5), width = "8em") %>%
+#   add_header_above(c(" " = 0, "Sprinkler Variables" = 3), bold = TRUE)
+```
+
+```{r originvar, echo=FALSE}
+# fire_incidents %>%
+#   select(`_id`, Area_of_Origin, Level_Of_Origin, Initial_CAD_Event_Type, Ignition_Source, Material_First_Ignited, Possible_Cause, Property_Use) %>%
+#   janitor::clean_names(case = "title") %>%
+#   slice(1:5) %>%
+#   kable(
+#     caption = "First ten rows of the fire origin features of a dataset of fire incidents in Toronto from 2011-2019",
+#     digits = 1,
+#     booktabs = TRUE, 
+#     linesep = ""
+#   )  %>%
+#   # column_spec(c(2,5), width = "8em") %>%
+#   add_header_above(c(" " = 0, "Origin Variables" = 8), bold = TRUE)
+```
+
+```{r firecontrolvar, echo=FALSE}
+# fire_incidents %>%
+#   select(`_id`, Method_Of_Fire_Control, Number_of_responding_apparatus, Number_of_responding_personnel) %>%
+#   janitor::clean_names(case = "title") %>%
+#   slice(1:5) %>%
+#   kable(
+#     caption = "First ten rows of the fire control features of a dataset of fire incidents in Toronto from 2011-2019",
+#     digits = 1,
+#     booktabs = TRUE, 
+#     linesep = ""
+#   )  %>%
+#   # column_spec(c(2,5), width = "8em") %>%
+#   add_header_above(c(" " = 0, "Fire control Variables" = 4), bold = TRUE)
+```
+
+```{r othervar, echo=FALSE}
+fire_incidents %>%
+  select(`_id`, Incident_Number, Extent_Of_Fire, Final_Incident_Type) %>%
+  janitor::clean_names(case = "title") %>%
+  slice(1:5) %>%
+  kable(
+    caption = "First ten rows of the other features of a dataset of fire incidents in Toronto from 2011-2019",
+    digits = 1,
+    booktabs = TRUE,
+    linesep = ""
+  )  %>%
+  column_spec(4, width = "18em") #%>%
+  # add_header_above(c(" " = 0, "Other Variables" = 4), bold = TRUE)
+```
+
+
+While there are several key features, we will choose to explore Civilian_Casualties, TFS_Alarm_Time, TFS_Arrival_Time, Possible_Cause, Estimated_Dollar_Loss and Area_of_Origin in the interest of our research questions. 
+
+<!-- What do fires look like in Toronto? -->
+
+## Number of fires over the past decade
+
+TFS_Arrival_Time
+
+```{r numberfires, echo=FALSE}
+
+fire_incidents %>%
+  mutate(year = as.factor(year(TFS_Alarm_Time))) %>%
+  ggplot(mapping = aes(x = year)) +
+  geom_bar(fill = "orange") +
+  scale_y_continuous(limits = c(0, 4000), breaks = seq(0, 4000, by = 1000)) +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank(), legend.position = "none") +
+  labs(x = "Year", 
+       y = "Number of Fires",
+       title = "Number of fires in Toronto per year 2011-2019",
+       caption = "Source: Toronto Fire Services."
+       )
+
+fires_by_year_counts <- fire_incidents %>%
+  mutate(year = as.factor(year(TFS_Alarm_Time))) %>%
+  count(year)
+```
+
+We can see that the number of fires has remained fairly constant over the years around 2000, but in 2018 there is a spike at `r max(fires_by_year_counts$n)`. However, since some of the observations were removed due to privacy reasons, it is unclear if this is due to missing observations. Another possible explanation for this increase is the wild fires (https://www.cbc.ca/news/canada/british-columbia/state-emergency-bc-wildfires-1.4803546).
+
+
+## Main causes of fires in Toronto
+
+Possible_Cause
+
+We can analysze the causes of fires by looking at the Possible Cause variable which is the cause as determined by the OFM code. There are 24 possible causes given in this dataset and 1913 observations have missing values for this variable. We have removed the missing values and show the causes ranked by largest number of fires in table \@ref(tab:causesfires).
+
+```{r causesfires, echo=FALSE}
+# fire_incidents %>%
+#   ggplot(mapping = aes(x = Possible_Cause)) +
+#   geom_bar(fill = "orange") +
+#   # scale_y_continuous(limits = c(0, 4000), breaks = seq(0, 4000, by = 1000)) +
+#   theme_minimal() +
+#   theme(panel.grid.major.x = element_blank(), legend.position = "none") +
+#   labs(x = "Possible Causes", 
+#        y = "Number of Fires",
+#        title = "Number of fires in Toronto per year 2011-2019",
+#        caption = "Source: Toronto Fire Services."
+#        )
+fires_by_cause_counts <- fire_incidents %>%
+  count(Possible_Cause)
+
+na.omit(fires_by_cause_counts[order(fires_by_cause_counts$n, decreasing = TRUE),]) %>%
+  kable(
+    caption = "Causes of Fires in Toronto",
+    col.names = c("Possible Cause", "Number of Fires"),
+    booktabs = TRUE,
+    linesep = ""
+  )  
+```
+
+bubble chart to correlate possible cause with area of origin?
+
+Area_of_Origin
+
+<!-- TFS response -->
+
+## Fire Services Response Times
+
+Boxplot
+
+```{r rtimesfires, echo=FALSE}
+fires_by_response_time <- fire_incidents %>%
+  mutate(year = as.factor(year(TFS_Alarm_Time)), response_time = as.numeric(TFS_Arrival_Time - TFS_Alarm_Time)/60)
+
+# fires_by_response_time %>%
+#   filter(response_time > 30)
+
+fires_by_response_time %>%
+  filter(response_time <= 30) %>%
+  ggplot(aes(y = year, x = response_time)) +
+  geom_boxplot()  +
+  scale_x_continuous(limits = c(0, 30), breaks = seq(0, 30, by = 5)) +
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank(), legend.position = "none") +
+  labs(x = "TFS Response times (minutes)", 
+       y = "Year",
+       title = "Distribution of TFS Response times per year 2011-2019",
+       caption = "Source: Toronto Fire Services."
+       )
+```
+Response time is pretty fast after receiving the 911 call, on average about 5 minutes and this remains about the same over the 2011-2019 period. Almost all responses have been under 30 minutes, except for 3 responses in the years 2012, 2018 and 2018 which were 682, 36 and 298 minutes respectively. These outliers are not shown in the boxplot.
+
+## Estimated Dollar Loss
+
+No description is provided for this variable, although we can safely deduce that it is the estimated cost of damages due to the fire in Canadian dollars.
+
+How does delay in response affect the cost in damages? Does time == money?
+
+```{r}
+# fires_by_response_time %>%
+#   filter(Estimated_Dollar_Loss < 1000000, response_time < 200) %>%
+#   ggplot(mapping = aes(x = Estimated_Dollar_Loss, y = response_time)) +
+#   geom_point()
+```
+
+
+- max dollar loss, average dollar loss, aggregated per year
+- total per year
+
+
+- What is the estimated damage costs of fires per year?
+- What parts of the house do most of the fires begin in?
+
+## Extent of damage
+
+Have fires gotten as out of control as in the Great Toronto Fire?
+```{r, echo=FALSE}
+fires_by_extent_counts <- fire_incidents %>%
+  count(Extent_Of_Fire)
+
+na.omit(fires_by_extent_counts[order(fires_by_extent_counts$n, decreasing = TRUE),]) %>%
+  kable(
+    caption = "Control of Fires in Toronto",
+    col.names = c("Extent of Fire", "Number of Fires"),
+    booktabs = TRUE,
+    linesep = ""
+  )  
+```
+
+
+# Model
+
+\begin{equation}
+Pr(\theta | y) = \frac{Pr(y | \theta) Pr(\theta)}{Pr(y)}  (\#eq:bayes)
+\end{equation}
+
+Equation \@ref(eq:bayes) seems useful, eh?
+
+Here's a dumb example of how to use some references: In paper we run our analysis in `R` [@citeR]. We also use the `tidyverse` which was written by @thereferencecanbewhatever If we were interested in baseball data then @citeLahman could be useful. 
+
+We can use maths by including latex between dollar signs, for instance $\theta$.
+
+
+# Results
+
+# Discussion
+
+## First discussion point
+
+If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+
+## Second discussion point
+
+## Third discussion point
+
+## Weaknesses and next steps
+
+Weaknesses and next steps should also be included.
+
+\newpage
+
+\appendix
+
+# Appendix {-}
+
+
+# Additional details
+
+
+\newpage
+
+
+# References
+
+
