@@ -2,7 +2,7 @@
 title: "The Not-so-great fires of Toronto"
 subtitle: "Fire incidents 2011-2019 under control by the Toronto Fire Services"
 author: Kimlin Chin
-thanks: "Code and data are available at: LINK."
+thanks: "Code and data are available at: https://github.com/KCtt457/toronto-fires-data-summary."
 date: "`r format(Sys.time(), '%d %B %Y')`"
 abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
 output:
@@ -21,6 +21,7 @@ library(janitor)
 library(kableExtra)
 
 library(lubridate)
+library(stringr)
 
 # read in data
 fire_incidents <- read_csv(here::here("inputs/data/fire_incidents.csv"))
@@ -63,17 +64,18 @@ You can and should cross-reference sections and sub-sections. For instance, Sect
 # Data
 
 <!-- Source of data -->
-The data was obtained from the Toronto Fire Services (TFS) and downloaded through the Open Data Toronto portal. It consists of all the recorded fire incidents that Toronto Fire responded to during the period 2011-2019. 
+The data was obtained from the Toronto Fire Services (TFS) and downloaded through the Open Data Toronto portal. It consists of the recorded fire incidents that Toronto Fire responded to during the period 2011-2019. It is has not been stated if this is a comprehensive set of all the fire incidents.
 
 <!-- Methodology and approach used to collect and process the data -->
 <!-- How is data recorded -->
-When a fire occurs, an individual can alert the TFS by calling 9-1-1. Response to these calls and dispatching the units is handled by the TFS Communications Centre (Annual report). The Communications Centre also appears to be responsible for actively monitoring and updating information on current fire incidents, as there is a page on the City of Toronto website with active fire incidents, updated at 5-minute intervals (https://www.toronto.ca/community-people/public-safety-alerts/alerts-notifications/toronto-fire-active-incidents/). The data on fire incidents may also be processed by the Fire Investigation Division of the TFS to add more details such as fire cause, origin and circumstances (Annual Report). This dataset is described to be "similar to what is sent to the Ontario Fire Marshal" (https://open.toronto.ca/dataset/fire-incidents/), which is the main leadership body on fire safety in Ontario (https://www.ontario.ca/page/office-fire-marshal), one of whose functions is to collect comprehensive data on fire incidents from all Ontario fire departments. However, personal information and some of the observations were removed from this dataset for privacy purposes. The dataset received a Gold data quality score on the Open Data Toronto portal, which is the highest badge based on rated data features of accessibility, completeness, freshness, metadata and usability.
+When a fire occurs, an individual can alert the TFS by calling 9-1-1. Response to these calls and dispatching the units is handled by the TFS Communications Centre (@a2019_toronto). The Communications Centre also appears to be responsible for actively monitoring and updating information on current fire incidents, as there is a page on the City of Toronto website with active fire incidents, updated at 5-minute intervals (https://www.toronto.ca/community-people/public-safety-alerts/alerts-notifications/toronto-fire-active-incidents/). The data on fire incidents may also be processed by the Fire Investigation Division of the TFS to add more details such as fire cause, origin and circumstances (@a2019_toronto). This dataset is described to be "similar to what is sent to the Ontario Fire Marshal" (https://open.toronto.ca/dataset/fire-incidents/), which is the main leadership body on fire safety in Ontario (https://www.ontario.ca/page/office-fire-marshal), one of whose functions is to collect comprehensive data on fire incidents from all Ontario fire departments. However, personal information and some of the observations were removed from this dataset for privacy purposes. The dataset received a Gold data quality score on the Open Data Toronto portal, which is the highest badge based on rated data features of accessibility, completeness, freshness, metadata and usability.
 
 <!-- Key features, strengths and weaknesses about the source -->
-There are 43 variables in the dataset and 17536 observations. Each observation represents a single fire incident, with details about the location, time, persons affected, cause and extent of the fire. The many variables allows an excess of details about each incident to be provided and a lot of room for data exploration, but there is also a large number of missing values. With 17536 observations, it is a fairly large dataset which is good for data analysis.
+There are 43 variables in the dataset and 17536 observations. Each observation represents a single fire incident, with details about the location, time, persons affected, cause and extent of the fire. Since these values are mainly objective numbers, the data should be relatively unbiased. The many variables allows an excess of details about each incident to be provided and a lot of room for data exploration, but there is also a large number of missing values. With 17536 observations, it is a fairly large dataset which is good for data analysis.
 
 Since there are so many variables, we will group them by similarity and show a glimpse of some of the data observations. This is shown in tables \@ref(tab:locationvar)
 <!-- What does the data look like? -->
+
 ```{r locationvar, echo=FALSE}
 fire_incidents %>%
   select(`_id`, Incident_Station_Area, Incident_Ward, Intersection, Latitude, Longitude) %>%
@@ -218,9 +220,9 @@ While there are several key features, we will choose to explore Civilian_Casualt
 
 ## Number of fires over the past decade
 
-TFS_Arrival_Time
+Year alone is not a feature in the dataset, but it is present in the time variables such as TFS Alarm Time and TFS Arrival Time. TFS Alarm Time is the time when the TFS was notified of the incident, so we can extract the year from this feature and plot the number of fires by year over the period from 2011-2019 in figure \@ref(fig:numberfires).
 
-```{r numberfires, echo=FALSE}
+```{r numberfires, echo=FALSE, fig.cap = "Number of fires in Toronto per year 2011-2019"}
 
 fire_incidents %>%
   mutate(year = as.factor(year(TFS_Alarm_Time))) %>%
@@ -240,14 +242,12 @@ fires_by_year_counts <- fire_incidents %>%
   count(year)
 ```
 
-We can see that the number of fires has remained fairly constant over the years around 2000, but in 2018 there is a spike at `r max(fires_by_year_counts$n)`. However, since some of the observations were removed due to privacy reasons, it is unclear if this is due to missing observations. Another possible explanation for this increase is the wild fires (https://www.cbc.ca/news/canada/british-columbia/state-emergency-bc-wildfires-1.4803546).
+The number of fires appears to fairly constant over the years, just under 2000 in number, but in 2018 there is a spike at `r max(fires_by_year_counts$n)` fires. However, since some of the observations were removed due to privacy reasons, it is unclear if this is due to missing observations. Upon further investigation, I found that the TFS Annual Report 2019 featured emergency response statitics, and in it, 36,496 and 35,334 emergency fires were reported for 2018 and 2019 respectively (@a2019_toronto). Therefore the number of fire incidents per year is only a small subset of the actual number and we cannot necessarily draw inferences about the increase or decrease in number of fires over the 2011-2019 time period, and these fire incidents may not be representative of the larger set of fire incidents in a particular year.
 
 
 ## Main causes of fires in Toronto
 
-Possible_Cause
-
-We can analysze the causes of fires by looking at the Possible Cause variable which is the cause as determined by the OFM code. There are 24 possible causes given in this dataset and 1913 observations have missing values for this variable. We have removed the missing values and show the causes ranked by largest number of fires in table \@ref(tab:causesfires).
+To analyze the causes of fires in Toronto, we can look at the Possible Cause variable which is the cause as determined by the Ontario Fire Marshal (OFM) codes with their description. There are 24 possible causes which appear in this dataset and 1913 observations have missing values for this variable. We have removed the missing values and show the causes ranked by largest number of fires in table \@ref(tab:causesfires).
 
 ```{r causesfires, echo=FALSE}
 # fire_incidents %>%
@@ -273,17 +273,71 @@ na.omit(fires_by_cause_counts[order(fires_by_cause_counts$n, decreasing = TRUE),
   )  
 ```
 
-bubble chart to correlate possible cause with area of origin?
+From this summary, the majority of the fires appear to have unintentional or undetermined causes, or are the result of some mechanical failure. A fire is deemed 'undetermined' when its cause "cannot be proven to an acceptable level of certainty" (@a2019_toronto). Relatively few fire incidents are caused by criminal activity such as arson and vandalism. These causes may be determined through investigation by the Fire Investigation Division of the TFS. However, in the TFS 2019 Annual report, only 172 fire investigations were conducted about the origin, cause and circumstances of fire incidents compared to the 35,334 emergency fires, so the cause may also be recorded when the TFS units arrive on the scene of a fire.
 
-Area_of_Origin
+
+## Extent of damage
+
+Extent of Fire is the extent to which the fire has spread as determined by OFM code, with their description. There are 10 possible extent of fire codes that appear in this dataset, which are characterized by whether they spread or not and the objects, rooms or buildings they spread to. We process this variable and divide it into two: (1) for if it spread, and (2) the localization of the spread and plot it in figure \@ref(fig:spreadfires).
+
+```{r spreadfires, echo=FALSE, fig.cap="Extent of Spread of Fires by localization"}
+# fires_by_extent_counts <- fire_incidents %>%
+#   count(Extent_Of_Fire)
+# 
+# na.omit(fires_by_extent_counts[order(fires_by_extent_counts$n, decreasing = TRUE),]) %>%
+#   kable(
+#     caption = "Control of Fires in Toronto",
+#     col.names = c("Extent of Fire", "Number of Fires"),
+#     booktabs = TRUE,
+#     linesep = ""
+#   )  
+
+fires_by_extent <- fire_incidents %>%
+  mutate(spread = case_when(str_detect(Extent_Of_Fire, "Confined") ~ "Confined",
+                            str_detect(Extent_Of_Fire, "Spread") ~ "Spread",
+                            str_detect(Extent_Of_Fire, "Multi unit bldg") ~ "Spread",
+                            str_detect(Extent_Of_Fire, "99") ~ "Undetermined",
+                                      
+                            str_detect(Extent_Of_Fire, "8") ~ "Entire Structure",
+                            TRUE ~ Extent_Of_Fire),
+         `Locale of Fire` = case_when(str_detect(Extent_Of_Fire, "1") ~ "Object of Origin",
+                                      str_detect(Extent_Of_Fire, "10") ~ "Beyond Building of Origin",
+                                      str_detect(Extent_Of_Fire, "11") ~ "Beyond Building, resulting in exposure fires",
+                                      str_detect(Extent_Of_Fire, "2") ~ "Room/Area of origin",
+                                      str_detect(Extent_Of_Fire, "3") ~ "Entire Room of Origin",
+                                      str_detect(Extent_Of_Fire, "4") ~ "Beyond Room, same floor",
+                                      str_detect(Extent_Of_Fire, "5") ~ "Multi unit building - Beyond suite, but not separate suites",
+                                      str_detect(Extent_Of_Fire, "6") ~ "Multi unit building - Separate Suites",
+                                      str_detect(Extent_Of_Fire, "7") ~ "Other floors",
+                                      str_detect(Extent_Of_Fire, "99") ~ "Undetermined",
+                                      str_detect(Extent_Of_Fire, "9") ~ "Roof/Exterior",
+                                      str_detect(Extent_Of_Fire, "8") ~ "Entire Structure"
+           
+         ))
+
+
+
+na.omit(fires_by_extent) %>%
+ggplot(mapping = aes(x = spread, fill=`Locale of Fire`)) +
+  geom_bar() + 
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank()) +
+  labs(x = "Fire Spread", 
+       y = "Number of fires",
+       title = "Extent of Spread of Fires by localization",
+       caption = "Source: Toronto Fire Services") +
+  coord_flip()
+
+```
+The majority of the fire incidents reported to the TFS are fires that have spread beyond their original source, with more than half of these coming from an object. This aligns with the some of the popular causes of fire incidents which include electrical incidents, improperly discarded object or unattended object. The distribution of fires between spread, confined, entire structure and undetermined also seems plausible since most people would deem the fire an emergency if it has gotten out of control or spread.
 
 <!-- TFS response -->
 
 ## Fire Services Response Times
 
-Boxplot
+We can define the time it takes between the initial call and the arrival time of the TFS on the scene to be the response time, which we calculate by taking the difference of the variables TFS Alarm Time and TFS Arrival Time. TFS Arrival time is given as the time of the first arriving unit to the incident and TFS Alarm Time is the the time when the TFS was notified of the incident. We visualize how the response time of the TFS is distributed per year in the boxplot in figure \@ref(fig:rtimesfires).
 
-```{r rtimesfires, echo=FALSE}
+```{r rtimesfires, echo=FALSE, fig.cap="Distribution of TFS Response times per year 2011-2019"}
 fires_by_response_time <- fire_incidents %>%
   mutate(year = as.factor(year(TFS_Alarm_Time)), response_time = as.numeric(TFS_Arrival_Time - TFS_Alarm_Time)/60)
 
@@ -303,44 +357,28 @@ fires_by_response_time %>%
        caption = "Source: Toronto Fire Services."
        )
 ```
-Response time is pretty fast after receiving the 911 call, on average about 5 minutes and this remains about the same over the 2011-2019 period. Almost all responses have been under 30 minutes, except for 3 responses in the years 2012, 2018 and 2018 which were 682, 36 and 298 minutes respectively. These outliers are not shown in the boxplot.
+Response time is pretty fast after receiving the 911 call, on average about 5 minutes and little deviation from this average over the 2011-2019 period. Almost all responses have been under 30 minutes, except for 3 responses in the years 2012, 2018 and 2018 which were 682, 36 and 298 minutes respectively. These outliers are not shown in the boxplot.
 
-## Estimated Dollar Loss
+<!-- ## Estimated Dollar Loss -->
 
-No description is provided for this variable, although we can safely deduce that it is the estimated cost of damages due to the fire in Canadian dollars.
+<!-- No description is provided for this variable, although we can safely deduce that it is the estimated cost of damages due to the fire in Canadian dollars. -->
 
-How does delay in response affect the cost in damages? Does time == money?
+<!-- How does delay in response affect the cost in damages? Does time == money? -->
 
-```{r}
-# fires_by_response_time %>%
-#   filter(Estimated_Dollar_Loss < 1000000, response_time < 200) %>%
-#   ggplot(mapping = aes(x = Estimated_Dollar_Loss, y = response_time)) +
-#   geom_point()
+```{r, include=FALSE}
+fire_incidents %>%
+  ggplot(mapping = aes(x = Estimated_Dollar_Loss, y = Fire_Under_Control_Time)) +
+  geom_point()
 ```
 
 
-- max dollar loss, average dollar loss, aggregated per year
-- total per year
+<!-- - max dollar loss, average dollar loss, aggregated per year -->
+<!-- - total per year -->
 
 
-- What is the estimated damage costs of fires per year?
-- What parts of the house do most of the fires begin in?
+<!-- - What is the estimated damage costs of fires per year? -->
+<!-- - What parts of the house do most of the fires begin in? -->
 
-## Extent of damage
-
-Have fires gotten as out of control as in the Great Toronto Fire?
-```{r, echo=FALSE}
-fires_by_extent_counts <- fire_incidents %>%
-  count(Extent_Of_Fire)
-
-na.omit(fires_by_extent_counts[order(fires_by_extent_counts$n, decreasing = TRUE),]) %>%
-  kable(
-    caption = "Control of Fires in Toronto",
-    col.names = c("Extent of Fire", "Number of Fires"),
-    booktabs = TRUE,
-    linesep = ""
-  )  
-```
 
 
 # Model
